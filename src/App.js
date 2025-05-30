@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './Login';
-import Main from './Main'; // 👉 기존 App.js 코드 옮겨둔 파일 (시트 + 채팅 UI)
+import Login from './pages/Login';
+import Main from './pages/Main'; // 👉 기존 App.js 코드 옮겨둔 파일 (시트 + 채팅 UI)
 
 function App() {
   return (

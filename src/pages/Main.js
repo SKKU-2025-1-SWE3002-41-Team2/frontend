@@ -4,12 +4,29 @@ import { UniverSheetsCorePreset } from '@univerjs/presets/preset-sheets-core';
 import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US';
 import '@univerjs/presets/lib/styles/preset-sheets-core.css';
 import * as XLSX from 'xlsx'; // SheetJS 라이브러리 import
+import '../styles/Main.css'; 
+import backend from '../features/config';
 
 function App() {
     const containerRef = useRef(null);
     const univerAPIRef = useRef(null); // univerAPI를 저장할 ref 추가
     const [isHistoryOpen, setHistoryOpen] = useState(true);
+    const [chatInput, setChatInput] = useState('');
+    const [chatMessages, setChatMessages] = useState([
+        { role: 'user', text: 'Hello!' },
+        { role: 'ai', text: 'Welcome!' },
+        { role: 'user', text: 'What is Univer?' },
+    ]);
 
+    const handleSendMessage = () => {
+        if (!chatInput.trim()) return;
+
+        const newUserMessage = { role: 'user', text: chatInput };
+        const aiReply = { role: 'ai', text: `You said: ${chatInput}` }; // 예시 응답
+
+        setChatMessages(prev => [...prev, newUserMessage, aiReply]);
+        setChatInput('');
+    };
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -388,176 +405,91 @@ function App() {
     };
 
     return (
-        <div style={{ display: 'flex', width: '100%', height: '100vh', position: 'relative' }}>
+        <div className="main-container">
 
             {/* 📜 1. 슬라이딩 과거 이력 (왼쪽 고정) */}
-            <div
-                style={{
-                width: isHistoryOpen ? '10%' : '0',
-                transition: 'width 0.3s ease',
-                overflow: 'hidden',
-                borderRight: isHistoryOpen ? '1px solid #ccc' : 'none',
-                backgroundColor: '#fff',
-                boxSizing: 'border-box',
-                padding: isHistoryOpen ? '8px' : '0',
-                }}
-            >
-                <strong>Chat History</strong>
-                <ul style={{ listStyle: 'none', paddingLeft: 0, marginTop: '8px' }}>
-                <li>🟢 Prompt 1</li>
-                <li>🟢 Prompt 2</li>
-                <li>🟢 Prompt 3</li>
+            <div className={`history-panel ${isHistoryOpen ? 'open' : 'closed'}`}>
+                <div className="history-title">Chat History</div>
+                <ul className="history-list">
+                    <li>🟢 Prompt 1</li>
+                    <li>🟢 Prompt 2</li>
+                    <li>🟢 Prompt 3</li>
                 </ul>
             </div>
 
             {/* ◀▶ 토글 버튼 (왼쪽 화면 가장자리) */}
             <button
                 onClick={() => setHistoryOpen(!isHistoryOpen)}
-                style={{
-                position: 'absolute',
-                left: isHistoryOpen ? '10%' : '0',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 100,
-                padding: '4px 6px',
-                fontSize: '12px',
-                border: '1px solid #ccc',
-                backgroundColor: '#eee',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                }}
+                className={`toggle-button ${isHistoryOpen ? 'open' : 'closed'}`}
             >
                 {isHistoryOpen ? '◀' : '▶'}
             </button>
 
             {/* 💬 2. 고정된 채팅 패널 */}
-            <div
-                style={{
-                width: '20%',
-                height: '100%',
-                borderRight: '1px solid #ccc',
-                backgroundColor: '#f9f9f9',
-                display: 'flex',
-                flexDirection: 'column',
-                boxSizing: 'border-box',
-                }}
-            >
+            <div className="chat-panel">
                 {/* 채팅 메시지 리스트 (상단 85%) */}
-                <div style={{
-                flex: 8.5,
-                overflowY: 'auto',
-                padding: '12px',
-                fontSize: '14px',
-                }}>
-                <div><strong>User:</strong> Hello!</div>
-                <div><strong>AI:</strong> Welcome!</div>
-                <div><strong>User:</strong> What is Univer?</div>
+                <div className="chat-messages">
+                    {chatMessages.map((msg, index) => ( //**채팅이 입력시 보이게게
+                        <div key={index}>
+                            <strong>{msg.role === 'user' ? 'User' : 'AI'}:</strong> {msg.text}
+                        </div>
+                    ))}
                 </div>
 
                 {/* 채팅 입력창 및 버튼들 (하단 15%) */}
-                <div style={{ flex: 1.5, padding: '12px', borderTop: '1px solid #ccc' }}>
-                <textarea
-                    placeholder="Type your message..."
-                    style={{
-                    width: '100%',
-                    height: '30%',
-                    resize: 'none',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                    fontSize: '14px',
-                    boxSizing: 'border-box',
-                    }}
-                />
-                
-                {/* 파일 업로드 숨겨진 input */}
-                <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleUploadXLSX}
-                    style={{ display: 'none' }}
-                    id="xlsx-upload"
-                />
-                
-                {/* 버튼들을 가로로 배치 */}
-                <div style={{ 
-                    display: 'flex', 
-                    gap: '2px', 
-                    marginTop: '8px',
-                    flexWrap: 'wrap'
-                }}>
-                    <button
-                    style={{
-                        flex: 1,
-                        padding: '4px',
-                        backgroundColor: '#007bff',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        minWidth: '45px',
-                    }}
-                    >
-                    Send
-                    </button>
+                <div className="chat-input-area">
+                    <textarea
+                        placeholder="Type your message..."
+                        className="chat-textarea"
+                        value={chatInput} //**채팅이 입력시 엔터키로 전송
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage();
+                            }
+                        }}
+                    />
                     
-                    {/* 스냅샷 가져오기 버튼 */}
-                    <button
-                    onClick={handleGetSnapshot}
-                    style={{
-                        flex: 1,
-                        padding: '4px',
-                        backgroundColor: '#28a745',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        minWidth: '45px',
-                    }}
-                    >
-                    📊 스냅샷
-                    </button>
+                    {/* 파일 업로드 숨겨진 input */}
+                    <input
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleUploadXLSX}
+                        className="file-upload-hidden"
+                        id="xlsx-upload"
+                    />
                     
-                    {/* XLSX 다운로드 버튼 */}
-                    <button
-                    onClick={handleDownloadXLSX}
-                    style={{
-                        flex: 1,
-                        padding: '4px',
-                        backgroundColor: '#dc3545',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        minWidth: '45px',
-                    }}
-                    >
-                    📄 XLSX
-                    </button>
-                    
-                    {/* XLSX 업로드 버튼 */}
-                    <button
-                    onClick={() => document.getElementById('xlsx-upload').click()}
-                    style={{
-                        flex: 1,
-                        padding: '4px',
-                        backgroundColor: '#6f42c1',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        minWidth: '45px',
-                    }}
-                    >
-                    📁 업로드
-                    </button>
-                </div>
+                    {/* 버튼들을 가로로 배치 */}
+                    <div className="button-container">
+                        <button className="button-base button-send" onClick={handleSendMessage}>
+                            Send
+                        </button>
+                        
+                        {/* 스냅샷 가져오기 버튼 */}
+                        <button
+                            onClick={handleGetSnapshot}
+                            className="button-base button-snapshot"
+                        >
+                            📊 스냅샷
+                        </button>
+                        
+                        {/* XLSX 다운로드 버튼 */}
+                        <button
+                            onClick={handleDownloadXLSX}
+                            className="button-base button-download"
+                        >
+                            📄 XLSX
+                        </button>
+                        
+                        {/* XLSX 업로드 버튼 */}
+                        <button
+                            onClick={() => document.getElementById('xlsx-upload').click()}
+                            className="button-base button-upload"
+                        >
+                            📁 업로드
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -565,11 +497,7 @@ function App() {
             <div
                 id="univer-container"
                 ref={containerRef}
-                style={{
-                width: isHistoryOpen ? '70%' : '80%',
-                height: '100%',
-                transition: 'width 0.3s ease',
-                }}
+                className={`univer-container ${isHistoryOpen ? 'history-open' : 'history-closed'}`}
             />
         </div>
     );

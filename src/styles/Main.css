@@ -1,0 +1,160 @@
+/* 메인 컨테이너 */
+.main-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  position: relative;
+}
+
+/* 슬라이딩 과거 이력 (왼쪽 고정) */
+.history-panel {
+  transition: width 0.3s ease;
+  overflow: hidden;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
+.history-panel.open {
+  width: 10%;
+  border-right: 1px solid #ccc;
+  padding: 8px;
+}
+
+.history-panel.closed {
+  width: 0;
+  border-right: none;
+  padding: 0;
+}
+
+.history-title {
+  font-weight: bold;
+}
+
+.history-list {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 8px;
+}
+
+/* 토글 버튼 (왼쪽 화면 가장자리) */
+.toggle-button {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  background-color: #eee;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.toggle-button.open {
+  left: 10%;
+}
+
+.toggle-button.closed {
+  left: 0;
+}
+
+/* 고정된 채팅 패널 */
+.chat-panel {
+  width: 20%;
+  height: 100%;
+  border-right: 1px solid #ccc;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* 채팅 메시지 리스트 (상단 85%) */
+.chat-messages {
+  flex: 8.5;
+  overflow-y: auto;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.chat-messages strong {
+  font-weight: bold;
+}
+
+/* 채팅 입력창 및 버튼들 (하단 15%) */
+.chat-input-area {
+  flex: 1.5;
+  padding: 12px;
+  border-top: 1px solid #ccc;
+}
+
+.chat-textarea {
+  width: 100%;
+  height: 30%;
+  resize: none;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* 파일 업로드 숨겨진 input */
+.file-upload-hidden {
+  display: none;
+}
+
+/* 버튼들을 가로로 배치 */
+.button-container {
+  display: flex;
+  gap: 2px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.button-base {
+  flex: 1;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  min-width: 45px;
+  color: #fff;
+}
+
+.button-send {
+  background-color: #007bff;
+}
+
+.button-snapshot {
+  background-color: #28a745;
+}
+
+.button-download {
+  background-color: #dc3545;
+  font-weight: bold;
+}
+
+.button-upload {
+  background-color: #6f42c1;
+  font-weight: bold;
+}
+
+/* Univer 시트 */
+.univer-container {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.univer-container.history-open {
+  width: 70%;
+}
+
+.univer-container.history-closed {
+  width: 80%;
+}
+
+.univer-container footer { /* footer 비활성화 */
+  display: none;
+}
