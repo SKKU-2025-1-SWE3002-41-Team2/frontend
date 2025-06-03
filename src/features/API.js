@@ -12,7 +12,7 @@ const api = axios.create({
 
 
 export const chatAPI = {
-  getSession: async (userId) => {
+  getSessions: async (userId) => {
     try {
       const response = await api.get(`/sessions?userId=${userId}`);
       return response.data;
