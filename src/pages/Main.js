@@ -5,7 +5,11 @@ import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US';
 import '@univerjs/presets/lib/styles/preset-sheets-core.css';
 import * as XLSX from 'xlsx'; // SheetJS 라이브러리 import
 import '../styles/Main.css'; 
-import backend from '../features/config';
+import { backend } from '../features/config';
+
+import { chatAPI, sheetUtils } from '../features/API';
+
+
 
 function App() {
     const containerRef = useRef(null);
@@ -18,14 +22,137 @@ function App() {
         { role: 'user', text: 'What is Univer?' },
     ]);
 
-    const handleSendMessage = () => {
+    const [userId] = useState(1); // 임시 사용자 ID
+    const [currentSessionId, setCurrentSessionId] = useState(null);
+    const [sessions, setSessions] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const loadSessions = async () => {
+        try {
+            const sessionsData = await chatAPI.getSessions(userId);
+            setSessions(sessionsData);
+        } catch (error) {
+            console.error('세션 로드 실패:', error);
+        }
+    };
+
+    // 컴포넌트 마운트 시 세션 로드
+    useEffect(() => {
+        loadSessions();
+    }, []);
+    const handleSendMessage = async () => {
         if (!chatInput.trim()) return;
-
-        const newUserMessage = { role: 'user', text: chatInput };
-        const aiReply = { role: 'ai', text: `You said: ${chatInput}` }; // 예시 응답
-
-        setChatMessages(prev => [...prev, newUserMessage, aiReply]);
-        setChatInput('');
+        
+        setIsLoading(true);
+        
+        try {
+            let response;
+            
+            // 현재 시트 데이터를 파일로 변환
+            const snapshot = univerAPIRef.current?.getActiveWorkbook()?.save();
+            let sheetFile = null;
+            
+            if (snapshot) {
+                const xlsxWorkbook = convertUniverToSheetJS(snapshot);
+                sheetFile = sheetUtils.xlsxWorkbookToFile(xlsxWorkbook);
+            }
+            
+            if (!currentSessionId) {
+                // 새 세션 생성
+                response = await chatAPI.createSession(userId, chatInput, sheetFile);
+                setCurrentSessionId(response.sessionId);
+                
+                // 메시지 추가
+                const newMessages = [
+                    { role: 'user', text: chatInput },
+                    { role: 'ai', text: response.message.content }
+                ];
+                setChatMessages(newMessages);
+                
+                // 시트 데이터 업데이트 (있는 경우)
+                if (response.sheetData) {
+                    await updateUniverWithData(response.sheetData);
+                }
+                
+            } else {
+                // 기존 세션에 메시지 전송
+                response = await chatAPI.sendMessage(currentSessionId, chatInput, sheetFile);
+                
+                // 메시지 추가
+                const newUserMessage = { role: 'user', text: chatInput };
+                const aiReply = { role: 'ai', text: response.message.content };
+                setChatMessages(prev => [...prev, newUserMessage, aiReply]);
+                
+                // 시트 데이터 업데이트 (있는 경우)
+                if (response.sheetData) {
+                    await updateUniverWithData(response.sheetData);
+                }
+            }
+            
+            // 세션 목록 새로고침
+            await loadSessions();
+            
+        } catch (error) {
+            console.error('메시지 전송 실패:', error);
+            alert('메시지 전송 중 오류가 발생했습니다.');
+        } finally {
+            setChatInput('');
+            setIsLoading(false);
+        }
+    };
+    const updateUniverWithData = async (sheetData) => {
+        try {
+            if (univerAPIRef.current && sheetData) {
+                // 기존 인스턴스 제거
+                univerAPIRef.current.dispose();
+                
+                // 새 인스턴스 생성 및 데이터 로드
+                const containerId = 'univer-container';
+                const { univerAPI } = createUniver({
+                    locale: LocaleType.EN_US,
+                    locales: {
+                        [LocaleType.EN_US]: merge({}, sheetsCoreEnUS),
+                    },
+                    theme: defaultTheme,
+                    presets: [
+                        UniverSheetsCorePreset({
+                            container: containerId,
+                        }),
+                    ],
+                });
+                
+                univerAPIRef.current = univerAPI;
+                univerAPI.createUniverSheet(sheetData);
+            }
+        } catch (error) {
+            console.error('시트 데이터 업데이트 실패:', error);
+        }
+    };
+    const handleSessionSelect = async (sessionId) => {
+        try {
+            setIsLoading(true);
+            const sessionData = await chatAPI.getSessionMessages(sessionId);
+            
+            setCurrentSessionId(sessionId);
+            
+            // 메시지 변환
+            const messages = sessionData.messages.map(msg => ({
+                role: msg.senderType === 'USER' ? 'user' : 'ai',
+                text: msg.content
+            }));
+            setChatMessages(messages);
+            
+            // 시트 데이터 로드 (있는 경우)
+            if (sessionData.sheetData) {
+                await updateUniverWithData(sessionData.sheetData);
+            }
+            
+        } catch (error) {
+            console.error('세션 로드 실패:', error);
+            alert('세션을 불러오는 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
     };
     useEffect(() => {
         if (!containerRef.current) return;

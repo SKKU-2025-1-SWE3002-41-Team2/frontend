@@ -1,5 +1,5 @@
 import axios from 'axios';
-import backend from './config'
+import { backend } from './config'
 
 
 
@@ -14,7 +14,7 @@ const api = axios.create({
 export const chatAPI = {
   getSessions: async (userId) => {
     try {
-      const response = await api.get(`/sessions?userId=${userId}`);
+      const response = await api.get(`/api/chat/sessions?userId=${userId}`);
       return response.data;
     } catch (error) {
       console.error('세션 목록 가져오기 오류:', error);
@@ -35,7 +35,7 @@ export const chatAPI = {
         formData.append('sheetData', sheetFile);
       }
 
-      const response = await api.post('/sessions/create', formData, {
+      const response = await api.post('/api/chat/sessions/create', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -57,7 +57,7 @@ export const chatAPI = {
         formData.append('sheetData', sheetFile);
       }
 
-      const response = await api.post(`/sessions/${sessionId}/message`, formData, {
+      const response = await api.post(`/api/chat/sessions/${sessionId}/message`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -72,7 +72,7 @@ export const chatAPI = {
 
   deleteSession: async (sessionId) => {
     try {
-      await api.delete(`/sessions/${sessionId}`);
+      await api.delete(`/api/chat/sessions/${sessionId}`);
       return true;
     } catch (error) {
       console.error('세션 삭제 오류:', error);
@@ -83,7 +83,7 @@ export const chatAPI = {
 
   updateSession: async (sessionId, newName) => {
     try {
-      const response = await api.put(`/sessions/${sessionId}`, {
+      const response = await api.put(`/api/chat/sessions/${sessionId}`, {
         name: newName
       });
       return response.data;
@@ -93,10 +93,9 @@ export const chatAPI = {
     }
   },
 
-
   getSessionMessages: async (sessionId) => {
     try {
-      const response = await api.get(`/sessions/${sessionId}`);
+      const response = await api.get(`/api/chat/sessions/${sessionId}`);
       return response.data;
     } catch (error) {
       console.error('세션 메시지 가져오기 오류:', error);
