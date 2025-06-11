@@ -121,4 +121,19 @@ export const sheetUtils = {
   }
 };
 
+export const authAPI = {
+  login: async (username, password) => {
+    try {
+      const response = await api.post('/api/auth/login', {
+        username,
+        password
+      });
+      return response.data;
+    } catch (error) {
+      console.error('로그인 오류:', error);
+      throw error;
+    }
+  }
+};
+
 export default api;

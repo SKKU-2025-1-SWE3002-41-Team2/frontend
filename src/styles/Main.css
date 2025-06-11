@@ -158,3 +158,57 @@
 .univer-container footer { /* footer 비활성화 */
   display: none;
 }
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0 10px;
+}
+
+.new-chat-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.new-chat-button:hover {
+    background: #0056b3;
+}
+
+.session-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.session-item:hover {
+    background-color: #f5f5f5;
+}
+
+.session-item.active {
+    background-color: #e3f2fd;
+    border-left: 3px solid #007bff;
+}
+
+.session-name {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.session-date {
+    font-size: 12px;
+    color: #666;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
