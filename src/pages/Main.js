@@ -9,7 +9,7 @@ import { backend } from '../features/config';
 
 import { chatAPI, sheetUtils } from '../features/API';
 
-
+import ReactMarkdown from 'react-markdown';
 
 
 
@@ -701,9 +701,10 @@ const handleSendMessage = async () => {
             <div className="chat-panel">
                 {/* 채팅 메시지 리스트 (상단 85%) */}
                 <div className="chat-messages">
-                    {chatMessages.map((msg, index) => ( //**채팅이 입력시 보이게게
+                    {chatMessages.map((msg, index) => (
                         <div key={index}>
-                            <strong>{msg.role === 'user' ? 'User' : 'AI'}:</strong> {msg.text}
+                            <strong>{msg.role === 'user' ? 'User' : 'AI'}:</strong>
+                            <ReactMarkdown>{msg.text}</ReactMarkdown>
                         </div>
                     ))}
                 </div>
