@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createUniver, defaultTheme, LocaleType, merge } from '@univerjs/presets';
-import { UniverSheetsCorePreset } from '@univerjs/presets/preset-sheets-core';
+import { UniverSheetsCorePreset,CalculationMode } from '@univerjs/presets/preset-sheets-core';
 import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US';
 import '@univerjs/presets/lib/styles/preset-sheets-core.css';
 import * as XLSX from 'xlsx'; // SheetJS 라이브러리 import
@@ -51,7 +51,13 @@ const parseSheetData = (sheetData) => {
             for (let i = 0; i < binaryString.length; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
             }
-            const workbook = XLSX.read(bytes, { type: 'array' });
+            const workbook = XLSX.read(bytes, {
+                type: "array",
+                cellFormula: true, // 수식 포함
+                cellNF: true, // 포맷 포함
+                cellText: false, // 표시 텍스트 생략
+                cellStyles: true,
+            });
             return convertSheetJSToUniver(workbook);
         } catch (err) {
             console.error('시트 데이터(xlsx) 디코딩 오류:', err);
@@ -100,8 +106,8 @@ const decodeBase64Fields = (obj) => {
 
     for (const [key, value] of Object.entries(obj)) {
         if (key === 'sheetData') {
-            // **sheetData는 여기서 디코딩하지 않음**
             decoded[key] = value;
+            // **sheetData는 여기서 디코딩하지 않음**
         } else if (typeof value === 'string' && (key.includes('data') || key.includes('content'))) {
             const decodedValue = decodeBase64Data(value);
             decoded[key] = decodedValue || value;
@@ -375,7 +381,8 @@ const handleSessionSelect = async (sessionId) => {
                                 // 함수가 있는 경우 함수 정보 포함
                                 if (xlsxCell.f) {
                                     univerCell.f = convertFormulaToUniver(xlsxCell.f);
-                                    console.log(`📥 함수 업로드: ${cellAddress} = ${univerCell.f} (값: ${univerCell.v})`);
+                                    console.log(`📥 함수 업로드: ${cellAddress} = ${univerCell.f} (값: ${univerCell.v}) (데이터 타입: ${univerCell.t})`);
+                                    univerCell.t = 2;
                                 }
 
                                 // 데이터 타입 설정
@@ -440,6 +447,9 @@ const handleSessionSelect = async (sessionId) => {
                     presets: [
                         UniverSheetsCorePreset({
                             container: containerId,
+                            formula: {
+                                initialFormulaComputing: CalculationMode.FORCED,
+                            },
                         }),
                     ],
                 });
