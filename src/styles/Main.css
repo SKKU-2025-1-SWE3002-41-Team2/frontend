@@ -9,7 +9,7 @@
 /* 슬라이딩 과거 이력 (왼쪽 고정) */
 .history-panel {
   transition: width 0.3s ease;
-  overflow: hidden;
+  overflow-y: auto;
   background-color: #fff;
   box-sizing: border-box;
 }

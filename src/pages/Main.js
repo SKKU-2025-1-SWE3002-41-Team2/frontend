@@ -43,40 +43,47 @@ function App() {
             return null;
         }
     };
-
+const parseSheetData = (sheetData) => {
+    if (typeof sheetData === 'string') {
+        try {
+            const binaryString = atob(sheetData);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const workbook = XLSX.read(bytes, { type: 'array' });
+            return convertSheetJSToUniver(workbook);
+        } catch (err) {
+            console.error('시트 데이터(xlsx) 디코딩 오류:', err);
+            return null;
+        }
+    }
+    return sheetData; // 이미 변환되어 있으면 그대로
+};
 const handleNewChat = async () => {
     setIsLoading(true);
     try {
-        // Univer 시트의 현재 상태를 파일로 변환
         const snapshot = univerAPIRef.current?.getActiveWorkbook()?.save();
         let sheetFile = null;
-
         if (snapshot) {
             const xlsxWorkbook = convertUniverToSheetJS(snapshot);
             sheetFile = sheetUtils.xlsxWorkbookToFile(xlsxWorkbook);
         }
 
-        // 빈 메시지로 createSession 호출 (혹은 환영 메시지 넣어도 됨)
         let response = await chatAPI.createSession(userId, '새 채팅 시작', sheetFile);
         response = decodeBase64Fields(response);
 
         setCurrentSessionId(response.sessionId);
-        setChatMessages([]); // 채팅 내용 비우기
+        setChatMessages([]);
 
-        // 시트 데이터 초기화
+        // (적용!) sheetData 처리
         if (response.sheetData) {
-            let sheetData = response.sheetData;
-            if (typeof sheetData === 'string') {
-                try {
-                    sheetData = JSON.parse(sheetData);
-                } catch (parseError) {
-                    console.error('시트 데이터 JSON 파싱 오류:', parseError);
-                }
+            const univerSheetData = parseSheetData(response.sheetData);
+            if (univerSheetData) {
+                await updateUniverWithData(univerSheetData);
             }
-            await updateUniverWithData(sheetData);
         }
 
-        // 세션 목록 새로고침
         await loadSessions();
     } catch (error) {
         console.error('새 채팅 생성 실패:', error);
@@ -85,24 +92,27 @@ const handleNewChat = async () => {
         setIsLoading(false);
     }
 };
-    const decodeBase64Fields = (obj) => {
-        if (!obj || typeof obj !== 'object') return obj;
-        
-        const decoded = Array.isArray(obj) ? [] : {};
-        
-        for (const [key, value] of Object.entries(obj)) {
-            if (typeof value === 'string' && (key.includes('data') || key.includes('content') || key.includes('sheet'))) {
-                const decodedValue = decodeBase64Data(value);
-                decoded[key] = decodedValue || value;
-            } else if (typeof value === 'object') {
-                decoded[key] = decodeBase64Fields(value);
-            } else {
-                decoded[key] = value;
-            }
+
+const decodeBase64Fields = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+
+    const decoded = Array.isArray(obj) ? [] : {};
+
+    for (const [key, value] of Object.entries(obj)) {
+        if (key === 'sheetData') {
+            // **sheetData는 여기서 디코딩하지 않음**
+            decoded[key] = value;
+        } else if (typeof value === 'string' && (key.includes('data') || key.includes('content'))) {
+            const decodedValue = decodeBase64Data(value);
+            decoded[key] = decodedValue || value;
+        } else if (typeof value === 'object') {
+            decoded[key] = decodeBase64Fields(value);
+        } else {
+            decoded[key] = value;
         }
-        
-        return decoded;
-    };
+    }
+    return decoded;
+};
 
 
     const loadSessions = async () => {
@@ -120,77 +130,44 @@ const handleNewChat = async () => {
     }, []);
 const handleSendMessage = async () => {
     if (!chatInput.trim()) return;
-    
     setIsLoading(true);
-    
+
     try {
         let response;
-        
-        // 현재 시트 데이터를 파일로 변환
         const snapshot = univerAPIRef.current?.getActiveWorkbook()?.save();
         let sheetFile = null;
-        
         if (snapshot) {
             const xlsxWorkbook = convertUniverToSheetJS(snapshot);
             sheetFile = sheetUtils.xlsxWorkbookToFile(xlsxWorkbook);
         }
-        
+
         if (!currentSessionId) {
-            // 새 세션 생성
             response = await chatAPI.createSession(userId, chatInput, sheetFile);
-            
-            // base64 디코딩 처리
             response = decodeBase64Fields(response);
-            
             setCurrentSessionId(response.sessionId);
-            
-            const newMessages = [
+            setChatMessages([
                 { role: 'user', text: chatInput },
                 { role: 'ai', text: response.message.content }
-            ];
-            setChatMessages(newMessages);
-            
-            // 시트 데이터 처리
-            if (response.sheetData) {
-                let sheetData = response.sheetData;
-                if (typeof sheetData === 'string') {
-                    try {
-                        sheetData = JSON.parse(sheetData);
-                    } catch (parseError) {
-                        console.error('시트 데이터 JSON 파싱 오류:', parseError);
-                    }
-                }
-                await updateUniverWithData(sheetData);
-            }
-            
+            ]);
         } else {
-            // 기존 세션에 메시지 전송
             response = await chatAPI.sendMessage(currentSessionId, chatInput, sheetFile);
-            
-            // base64 디코딩 처리
             response = decodeBase64Fields(response);
-            
-            const newUserMessage = { role: 'user', text: chatInput };
-            const aiReply = { role: 'ai', text: response.message.content };
-            setChatMessages(prev => [...prev, newUserMessage, aiReply]);
-            
-            // 시트 데이터 처리
-            if (response.sheetData) {
-                let sheetData = response.sheetData;
-                if (typeof sheetData === 'string') {
-                    try {
-                        sheetData = JSON.parse(sheetData);
-                    } catch (parseError) {
-                        console.error('시트 데이터 JSON 파싱 오류:', parseError);
-                    }
-                }
-                await updateUniverWithData(sheetData);
+            setChatMessages(prev => [
+                ...prev,
+                { role: 'user', text: chatInput },
+                { role: 'ai', text: response.message.content }
+            ]);
+        }
+
+        // (적용!) sheetData 처리
+        if (response.sheetData) {
+            const univerSheetData = parseSheetData(response.sheetData);
+            if (univerSheetData) {
+                await updateUniverWithData(univerSheetData);
             }
         }
-        
-        // 세션 목록 새로고침
+
         await loadSessions();
-        
     } catch (error) {
         console.error('메시지 전송 실패:', error);
         alert('메시지 전송 중 오류가 발생했습니다.');
@@ -199,6 +176,7 @@ const handleSendMessage = async () => {
         setIsLoading(false);
     }
 };
+
     const updateUniverWithData = async (sheetData) => {
         try {
             if (univerAPIRef.current && sheetData) {
@@ -227,47 +205,36 @@ const handleSendMessage = async () => {
             console.error('시트 데이터 업데이트 실패:', error);
         }
     };
-    const handleSessionSelect = async (sessionId) => {
-        try {
-            setIsLoading(true);
-            let sessionData = await chatAPI.getSessionMessages(sessionId);
-            
-            // base64 디코딩 처리
-            sessionData = decodeBase64Fields(sessionData);
-            
-            setCurrentSessionId(sessionId);
-            
-            const messages = sessionData.messages.map(msg => ({
-                role: msg.senderType === 'USER' ? 'user' : 'ai',
-                text: msg.content
-            }));
-            setChatMessages(messages);
-            
-            // sheetData가 base64로 인코딩되어 있을 수 있음
-            if (sessionData.sheetData) {
-                let sheetData = sessionData.sheetData;
-                
-                // sheetData가 문자열이면 JSON 파싱 시도
-                if (typeof sheetData === 'string') {
-                    try {
-                        sheetData = JSON.parse(sheetData);
-                    } catch (parseError) {
-                        console.error('시트 데이터 JSON 파싱 오류:', parseError);
-                    }
-                }
-                
-                await updateUniverWithData(sheetData);
+const handleSessionSelect = async (sessionId) => {
+    try {
+        setIsLoading(true);
+        let sessionData = await chatAPI.getSessionMessages(sessionId);
+        sessionData = decodeBase64Fields(sessionData);
+
+        setCurrentSessionId(sessionId);
+
+        const messages = sessionData.messages.map(msg => ({
+            role: msg.senderType === 'USER' ? 'user' : 'ai',
+            text: msg.content
+        }));
+        setChatMessages(messages);
+
+        // (적용!) sheetData 처리
+        if (sessionData.sheetData) {
+            const univerSheetData = parseSheetData(sessionData.sheetData);
+            if (univerSheetData) {
+                await updateUniverWithData(univerSheetData);
             }
-            
-        } catch (error) {
-            console.error('세션 로드 실패:', error);
-            alert('세션을 불러오는 중 오류가 발생했습니다.');
-        } finally {
-            setIsLoading(false);
         }
-    };
+    } catch (error) {
+        console.error('세션 로드 실패:', error);
+        alert('세션을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+        setIsLoading(false);
+    }
+};
 
-
+    
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -342,6 +309,9 @@ const handleSendMessage = async () => {
         
         let univerFormula = excelFormula.toString();
         
+        if (!univerFormula.startsWith('=')) {
+            univerFormula = '=' + univerFormula;
+        }
         // =로 시작하는 경우 그대로 유지 (Univer도 = 사용)
         // 필요시 특정 함수명 변환 로직 추가
         
