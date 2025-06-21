@@ -382,7 +382,6 @@ const handleSessionSelect = async (sessionId) => {
                                 if (xlsxCell.f) {
                                     univerCell.f = convertFormulaToUniver(xlsxCell.f);
                                     console.log(`📥 함수 업로드: ${cellAddress} = ${univerCell.f} (값: ${univerCell.v}) (데이터 타입: ${univerCell.t})`);
-                                    univerCell.t = 2;
                                 }
 
                                 // 데이터 타입 설정
