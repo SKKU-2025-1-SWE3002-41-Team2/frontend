@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createUniver, defaultTheme, LocaleType, merge } from '@univerjs/presets';
-import { UniverSheetsCorePreset } from '@univerjs/presets/preset-sheets-core';
+import { UniverSheetsCorePreset, CalculationMode } from '@univerjs/presets/preset-sheets-core';
 import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US';
 import '@univerjs/presets/lib/styles/preset-sheets-core.css';
 import * as XLSX from 'xlsx'; // SheetJS 라이브러리 import
@@ -51,7 +51,13 @@ const parseSheetData = (sheetData) => {
             for (let i = 0; i < binaryString.length; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
             }
-            const workbook = XLSX.read(bytes, { type: 'array' });
+            const workbook = XLSX.read(bytes, {
+            type: "array",
+            cellFormula: true, // 수식 포함
+            cellNF: true, // 포맷 포함
+            cellText: false, // 표시 텍스트 생략
+            cellStyles: true,
+            });
             return convertSheetJSToUniver(workbook);
         } catch (err) {
             console.error('시트 데이터(xlsx) 디코딩 오류:', err);
@@ -99,17 +105,8 @@ const decodeBase64Fields = (obj) => {
     const decoded = Array.isArray(obj) ? [] : {};
 
     for (const [key, value] of Object.entries(obj)) {
-        if (key === 'sheetData') {
-            // **sheetData는 여기서 디코딩하지 않음**
-            decoded[key] = value;
-        } else if (typeof value === 'string' && (key.includes('data') || key.includes('content'))) {
-            const decodedValue = decodeBase64Data(value);
-            decoded[key] = decodedValue || value;
-        } else if (typeof value === 'object') {
-            decoded[key] = decodeBase64Fields(value);
-        } else {
-            decoded[key] = value;
-        }
+        decoded[key] = value;
+
     }
     return decoded;
 };
@@ -192,9 +189,12 @@ const handleSendMessage = async () => {
                     },
                     theme: defaultTheme,
                     presets: [
-                        UniverSheetsCorePreset({
-                            container: containerId,
-                        }),
+UniverSheetsCorePreset({
+              container: containerId,
+              formula: {
+                initialFormulaComputing: CalculationMode.FORCED,
+              },
+            }),
                     ],
                 });
                 
@@ -246,8 +246,11 @@ const handleSessionSelect = async (sessionId) => {
         },
         theme: defaultTheme,
         presets: [
-            UniverSheetsCorePreset({
-            container: containerId,
+UniverSheetsCorePreset({
+              container: containerId,
+              formula: {
+                initialFormulaComputing: CalculationMode.FORCED,
+              },
             }),
         ],
         });
@@ -368,7 +371,7 @@ const handleSessionSelect = async (sessionId) => {
                                 
                                 // Univer 셀 데이터 생성
                                 const univerCell = {
-                                    v: xlsxCell.v || '',
+                                    v: xlsxCell.v ?? '',
                                     t: 1 // 기본 타입
                                 };
 
@@ -438,9 +441,12 @@ const handleSessionSelect = async (sessionId) => {
                     },
                     theme: defaultTheme,
                     presets: [
-                        UniverSheetsCorePreset({
-                            container: containerId,
-                        }),
+UniverSheetsCorePreset({
+              container: containerId,
+              formula: {
+                initialFormulaComputing: CalculationMode.FORCED, 
+              },
+            }),
                     ],
                 });
 
@@ -504,7 +510,7 @@ const handleSessionSelect = async (sessionId) => {
                             if (cellData && typeof cellData === 'object') {
                                 // 함수가 있는 경우 함수를 우선적으로 처리
                                 if (cellData.f || cellData.formula) {
-                                    const rawFormula = cellData.f || cellData.formula;
+                                    let rawFormula = cellData.f || cellData.formula;
                                     cellFormula = rawFormula; // 직접 사용 (이미 Excel 형식)
                                     cellValue = cellData.v || cellData.value || 0; // 함수 결과값
                                     cellType = typeof cellValue === 'number' ? 'n' : 's';
