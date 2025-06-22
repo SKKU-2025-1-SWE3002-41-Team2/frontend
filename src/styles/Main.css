@@ -67,7 +67,16 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  flex: 0 0 auto;
 }
+
+.vertical-resizer {
+  width: 4px;
+  cursor: col-resize;
+  background: #ddd;
+  user-select: none;
+}
+.vertical-resizer:hover { background:#bbb; }
 
 /* 채팅 메시지 리스트 (상단 85%) */
 .chat-messages {

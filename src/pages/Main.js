@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { createUniver, defaultTheme, LocaleType, merge } from '@univerjs/presets';
 import { UniverSheetsCorePreset, CalculationMode } from '@univerjs/presets/preset-sheets-core';
 import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US';
@@ -24,6 +24,9 @@ function App() {
         { role: 'ai', text: 'Welcome!' },
         { role: 'user', text: 'What is Univer?' },
     ]);
+    const [chatWidth, setChatWidth] = useState(20);   // ← % 단위
+const minChat = 15;                               // 최소 15 %
+const maxChat = 50;                               // 최대 50 %
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chatMessages]);
@@ -67,6 +70,23 @@ function App() {
             return null;
         }
     };
+    const startResize = useCallback((e) => {
+  e.preventDefault();
+  const startX = e.clientX;
+  const start   = chatWidth;
+
+  const onMove = (moveEvt) => {
+    const delta = moveEvt.clientX - startX;
+    const newW  = start + (delta / window.innerWidth) * 100;
+    setChatWidth(Math.min(maxChat, Math.max(minChat, newW)));
+  };
+  const onUp = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup',   onUp);
+  };
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup',   onUp);
+}, [chatWidth]);
 const parseSheetData = (sheetData) => {
     if (typeof sheetData === 'string') {
         try {
@@ -90,37 +110,46 @@ const parseSheetData = (sheetData) => {
     }
     return sheetData; // 이미 변환되어 있으면 그대로
 };
+
+const buildEmptySheetFile = () => {                                // ★
+  const wb = XLSX.utils.book_new();                                // 빈 워크북
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([]), 'Sheet1');
+  return sheetUtils.xlsxWorkbookToFile(wb, 'empty.xlsx');          // File 객체
+};
+
 const handleNewChat = async () => {
-    setIsLoading(true);
-    try {
-        const snapshot = univerAPIRef.current?.getActiveWorkbook()?.save();
-        let sheetFile = null;
-        if (snapshot) {
-            const xlsxWorkbook = convertUniverToSheetJS(snapshot);
-            sheetFile = sheetUtils.xlsxWorkbookToFile(xlsxWorkbook);
-        }
+  setIsLoading(true);
+  try {
+    // 항상 “빈 시트”를 보내도록
+    const sheetFile = buildEmptySheetFile();                       // ★
 
-        let response = await chatAPI.createSession(userId, '새 채팅 시작', sheetFile);
-        response = decodeBase64Fields(response);
+    // 필요 없다면 '새 채팅 시작' 대신 빈 문자열/null 도 가능
+    const responseRaw = await chatAPI.createSession(
+      userId,
+      '새 채팅 시작',
+      sheetFile                                              // ★
+    );
+    const response = decodeBase64Fields(responseRaw);
 
-        setCurrentSessionId(response.sessionId);
-        setChatMessages([]);
+    setCurrentSessionId(response.sessionId);
+    setChatMessages([]);
 
-        // (적용!) sheetData 처리
-        if (response.sheetData) {
-            const univerSheetData = parseSheetData(response.sheetData);
-            if (univerSheetData) {
-                await updateUniverWithData(univerSheetData);
-            }
-        }
-
-        await loadSessions();
-    } catch (error) {
-        console.error('새 채팅 생성 실패:', error);
-        alert('새 채팅 생성 중 오류가 발생했습니다.');
-    } finally {
-        setIsLoading(false);
+    /* 백엔드에서 빈 시트를 다시 돌려주면 response.sheetData 있을 수 있음.
+       그대로 비워두고 싶으면 아래 if 블록을 주석 처리해도 무방 */
+    if (response.sheetData) {
+      const univerSheetData = parseSheetData(response.sheetData);
+      if (univerSheetData) {
+        await updateUniverWithData(univerSheetData);
+      }
     }
+
+    await loadSessions();
+  } catch (error) {
+    console.error('새 채팅 생성 실패:', error);
+    alert('새 채팅 생성 중 오류가 발생했습니다.');
+  } finally {
+    setIsLoading(false);
+  }
 };
 
 const decodeBase64Fields = (obj) => {
@@ -730,7 +759,8 @@ UniverSheetsCorePreset({
             </button>
 
             {/* 💬 2. 고정된 채팅 패널 */}
-            <div className="chat-panel">
+            <div className="chat-panel"
+            style={{ width: `${chatWidth}%` }}>
                 {/* 채팅 메시지 리스트 (상단 85%) */}
                 <div className="chat-messages">
                     {chatMessages.map((msg, index) => (
@@ -799,12 +829,17 @@ UniverSheetsCorePreset({
                     </div>
                 </div>
             </div>
+            <div
+                className="vertical-resizer"
+                onMouseDown={startResize}
+                />
 
             {/* 📄 3. Univer 시트 */}
             <div
                 id="univer-container"
                 ref={containerRef}
                 className={`univer-container ${isHistoryOpen ? 'history-open' : 'history-closed'}`}
+                style={{flex: 1}}
             />
         </div>
     );
