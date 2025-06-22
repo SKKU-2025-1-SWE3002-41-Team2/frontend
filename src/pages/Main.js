@@ -115,6 +115,7 @@ const decodeBase64Fields = (obj) => {
     const loadSessions = async () => {
         try {
             const sessionsData = await chatAPI.getSessions(userId);
+            console.log('[loadSessions] sessionsData ▶', sessionsData);
             setSessions(sessionsData);
         } catch (error) {
             console.error('세션 로드 실패:', error);
@@ -658,7 +659,7 @@ UniverSheetsCorePreset({
                                     {session.name || `세션 ${session.id}`}
                                 </div>
                                 <div className="session-date">
-                                    {new Date(session.createdAt).toLocaleDateString()}
+                                    {new Date(session.modifiedAt).toLocaleDateString()}
                                 </div>
                             </li>
                         ))}
