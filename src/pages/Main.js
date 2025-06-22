@@ -592,7 +592,6 @@ function App() {
                 className={`history-panel ${isHistoryOpen ? "open" : "closed"}`}
             >
                 <div className="history-header">
-                    <div className="history-title">Chat History</div>
                     <button onClick={handleNewChat} className="new-chat-button">
                         새 채팅
                     </button>
