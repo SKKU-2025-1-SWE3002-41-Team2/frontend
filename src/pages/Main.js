@@ -501,7 +501,7 @@ function App() {
                             if (cellData && typeof cellData === "object") {
                                 if (cellData.f || cellData.formula) {
                                     let rawFormula =
-                                        cellData.f || cellData.formula;
+                                        (cellData.f || cellData.formula || "").replace(/^=/, "");
                                     cellFormula = rawFormula; 
                                     cellValue =
                                         cellData.v || cellData.value || 0;
