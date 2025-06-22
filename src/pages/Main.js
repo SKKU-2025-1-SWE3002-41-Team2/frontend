@@ -16,6 +16,7 @@ import ReactMarkdown from 'react-markdown';
 function App() {
     const containerRef = useRef(null);
     const univerAPIRef = useRef(null); 
+    const chatEndRef    = useRef(null);
     const [isHistoryOpen, setHistoryOpen] = useState(true);
     const [chatInput, setChatInput] = useState('');
     const [chatMessages, setChatMessages] = useState([
@@ -23,11 +24,34 @@ function App() {
         { role: 'ai', text: 'Welcome!' },
         { role: 'user', text: 'What is Univer?' },
     ]);
-
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages]);
     const [userId] = useState(1); 
     const [currentSessionId, setCurrentSessionId] = useState(null);
     const [sessions, setSessions] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+        const [editingId,   setEditingId]   = useState(null);  // 지금 편집 중인 세션 id
+    const [editingText, setEditingText] = useState('');    // 임시 입력값
+ 
+    // 제목 저장
+    const saveSessionName = async () => {
+      if (!editingId) return;
+      try {
+        await chatAPI.updateSession(editingId, editingText.trim() || '제목 없음');
+        // 로컬 목록도 갱신
+        setSessions(prev =>
+          prev.map(s =>
+            s.id === editingId ? { ...s, name: editingText.trim() } : s
+          )
+        );
+      } catch (e) {
+        alert('세션 이름 변경 실패 😥');
+      } finally {
+        setEditingId(null);
+        setEditingText('');
+      }
+    };
     const decodeBase64Data = (base64String) => {
         try {
             if (!base64String) return null;
@@ -655,9 +679,40 @@ UniverSheetsCorePreset({
                                 onClick={() => handleSessionSelect(session.id)}
                                 className={`session-item ${currentSessionId === session.id ? 'active' : ''}`}
                             >
-                                <div className="session-name">
-                                    {session.name || `세션 ${session.id}`}
-                                </div>
+                        <div
+                          className="session-name"
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();          // 선택 클릭 막기
+                            setEditingId(session.id);
+                            setEditingText(session.name || '');
+                          }}
+                        >
+                          {editingId === session.id ? (
+                            <input
+                              autoFocus
+                              value={editingText}
+                              onChange={e => setEditingText(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter')   saveSessionName();
+                                if (e.key === 'Escape') { setEditingId(null); setEditingText(''); }
+                              }}
+                              onBlur={saveSessionName}
+                              className="session-edit-input"
+                            />
+                          ) : (
+                            <>
+                              {session.name || `세션 ${session.id}`}
+                              <span
+                                className="edit-icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingId(session.id);
+                                  setEditingText(session.name || '');
+                                }}
+                              >✏️</span>
+                            </>
+                          )}
+                        </div>
                                 <div className="session-date">
                                     {new Date(session.modifiedAt).toLocaleDateString()}
                                 </div>
@@ -684,6 +739,8 @@ UniverSheetsCorePreset({
                             <ReactMarkdown>{msg.text}</ReactMarkdown>
                         </div>
                     ))}
+                    {/* ← 스크롤 목적지 */}
+                    <div ref={chatEndRef} />
                 </div>
 
                 {/* 채팅 입력창 및 버튼들 (하단 15%) */}

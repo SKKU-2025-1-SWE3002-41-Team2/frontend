@@ -90,7 +90,7 @@
 
 .chat-textarea {
   width: 100%;
-  height: 30%;
+  height: 70%;
   resize: none;
   padding: 8px;
   border-radius: 4px;
@@ -211,4 +211,15 @@
     text-align: center;
     padding: 20px;
     color: #666;
+}
+
+.session-edit-input {
+  width: 90%;
+  font-size: 13px;
+  padding: 2px 4px;
+}
+.edit-icon {
+  margin-left: 4px;
+  cursor: pointer;
+  font-size: 12px;
 }
