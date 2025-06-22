@@ -89,6 +89,7 @@ function App() {
                     cellFormula: true,
                     cellNF: true,
                     cellText: false,
+                    cellStyles: true,
                 });
                 return convertSheetJSToUniver(workbook);
             } catch (err) {
