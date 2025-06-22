@@ -202,9 +202,6 @@ function App() {
     const [chatInput, setChatInput] = useState("");
     // 백엔드 연동전에 넣어 놓은 프리셋 메시지
     const [chatMessages, setChatMessages] = useState([
-        { role: "user", text: "Hello!" },
-        { role: "ai", text: "Welcome!" },
-        { role: "user", text: "What is Univer?" },
     ]);
     // 채팅창 크기 조절 위함
     const [chatWidth, setChatWidth] = useState(20);
@@ -240,55 +237,6 @@ function App() {
         },
         [chatWidth]
     );
-
-    // 워크북을 JSON 스냅샷으로 저장해 시트 정보를 로그로 보여주는 디버그용 함수
-    const handleGetSnapshot = () => {
-        if (univerAPIRef.current) {
-            try {
-                const fWorkbook = univerAPIRef.current.getActiveWorkbook();
-                const snapshot = fWorkbook.save();
-                console.log(" 워크북 스냅샷:", snapshot);
-
-                if (snapshot.sheets) {
-                    Object.keys(snapshot.sheets).forEach((sheetId) => {
-                        const sheet = snapshot.sheets[sheetId];
-                        console.log(` 시트 [${sheet.name}] 분석:`);
-
-                        if (sheet.cellData) {
-                            Object.keys(sheet.cellData).forEach((rowKey) => {
-                                const rowData = sheet.cellData[rowKey];
-                                Object.keys(rowData).forEach((colKey) => {
-                                    const cellData = rowData[colKey];
-                                    const cellAddress = XLSX.utils.encode_cell({
-                                        r: parseInt(rowKey),
-                                        c: parseInt(colKey),
-                                    });
-
-                                    if (cellData) {
-                                        console.log(` 셀 ${cellAddress}:`, {
-                                            전체데이터: cellData,
-                                            값: cellData.v || cellData.value,
-                                            함수:
-                                                cellData.f || cellData.formula,
-                                            타입: cellData.t || cellData.type,
-                                        });
-                                    }
-                                });
-                            });
-                        }
-                    });
-                }
-                alert(
-                    "워크북 스냅샷이 콘솔에 출력되었습니다!\n셀 데이터 구조도 함께 분석되었습니다."
-                );
-            } catch (error) {
-                console.error("스냅샷 가져오기 오류:", error);
-                alert("스냅샷을 가져오는 중 오류가 발생했습니다.");
-            }
-        } else {
-            alert("Univer API가 아직 초기화되지 않았습니다.");
-        }
-    };
     // XLSX 파일로 다운로드하는 함수
     const handleDownloadXLSX = () => {
         if (univerAPIRef.current) {
@@ -646,7 +594,7 @@ function App() {
                 <div className="history-header">
                     <div className="history-title">Chat History</div>
                     <button onClick={handleNewChat} className="new-chat-button">
-                        + 새 채팅
+                        새 채팅
                     </button>
                 </div>
 
@@ -774,14 +722,6 @@ function App() {
                             onClick={handleSendMessage}
                         >
                             Send
-                        </button>
-
-                        {/* 스냅샷 가져오기 버튼 */}
-                        <button
-                            onClick={handleGetSnapshot}
-                            className="button-base button-snapshot"
-                        >
-                            스냅샷
                         </button>
 
                         {/* XLSX 다운로드 버튼 */}
